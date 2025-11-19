@@ -211,10 +211,7 @@ internal static class LiteralTypeFactory
 
     public static Type CreateBoolLiteral(bool value)
     {
-        // For booleans we don't need hex encoding; just map
-        // 'false' to 0 and 'true' to 1 using the existing Int literal
-        // infrastructure so the filter machinery can treat it like
-        // any other ILiteral<bool>.
+        // For booleans we don't need hex encoding
         return value
             ? typeof(TrueLiteral)
             : typeof(FalseLiteral);
