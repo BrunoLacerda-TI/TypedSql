@@ -54,7 +54,7 @@ If you want to peek under the hood in more detail, check out the **Deep dive** s
 - `SELECT col1, col2, ... FROM $`: returns multiple columns as a C# tuple `(T1, T2, ...)`.
 - `WHERE <column> <op> <literal>`: comparison operators `=`, `!=`, `>`, `<`, `>=`, `<=`.
 - Boolean operators: `AND`, `OR`, `NOT`, and grouping with `()`.
-- Literals: integers (`42`), floats (`123.45`), booleans (`true` / `false`), and single-quoted strings (`'Seattle'` with `''` as the escape).
+- Literals: integers (`42`), floats (`123.45`), booleans (`true` / `false`), single-quoted strings (`'Seattle'` with `''` as the escape) and `null` strings.
 - Column identifiers are case-insensitive.
 - Easily extensible for new expressions, operators, literals, and columns.
 
