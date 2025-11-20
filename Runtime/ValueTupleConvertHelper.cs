@@ -10,29 +10,24 @@ internal static class ValueTupleConvertHelper<TPublicResult, TRuntimeResult>
 {
     private delegate void CopyDelegate(ref TPublicResult dest, ref readonly TRuntimeResult source);
 
-    private static readonly CopyDelegate? _helper;
-    private static readonly bool _isInvalid;
+    private static readonly CopyDelegate _helper = default!;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Copy(ref TPublicResult dest, ref readonly TRuntimeResult source)
     {
-        if (_isInvalid)
-        {
-            throw new Exception("Invalid types for ValueTupleConvertHelper.");
-        }
-        if (typeof(TPublicResult) == typeof(TRuntimeResult)) // optional potential optimisation
+        if (typeof(TPublicResult) == typeof(TRuntimeResult))
         {
             dest = Unsafe.As<TRuntimeResult, TPublicResult>(ref Unsafe.AsRef(in source));
         }
         else
         {
-            _helper!(ref dest, in source);
+            _helper.Invoke(ref dest, in source);
         }
     }
 
     static ValueTupleConvertHelper()
     {
-        DynamicMethod dm = new($"ValueTupleConvertHelper+{typeof(TPublicResult)}+typeof(T2)", typeof(void), [typeof(TPublicResult).MakeByRefType(), typeof(TRuntimeResult).MakeByRefType()], true);
+        DynamicMethod dm = new($"ValueTupleConvertHelper+{typeof(TPublicResult)}_{typeof(TRuntimeResult)}", typeof(void), [typeof(TPublicResult).MakeByRefType(), typeof(TRuntimeResult).MakeByRefType()], true);
         ILGenerator ilGen = dm.GetILGenerator();
         if (typeof(TPublicResult) == typeof(TRuntimeResult))
         {
@@ -42,7 +37,6 @@ internal static class ValueTupleConvertHelper<TPublicResult, TRuntimeResult>
             ilGen.Emit(OpCodes.Ret);
             return;
         }
-        var isInvalidTmp = false;
         var tmp1 = ilGen.DeclareLocal(typeof(byte).MakeByRefType());
         var tmp2 = ilGen.DeclareLocal(typeof(byte).MakeByRefType());
         ilGen.Emit(OpCodes.Ldarg_0);
@@ -55,8 +49,7 @@ internal static class ValueTupleConvertHelper<TPublicResult, TRuntimeResult>
             var gDefn = t1.GetGenericTypeDefinition();
             if (gDefn != t2.GetGenericTypeDefinition() || !gDefn.IsGenericType)
             {
-                isInvalidTmp = true;
-                return;
+                throw new InvalidOperationException($"Cannot convert between types '{typeof(TPublicResult)}' and '{typeof(TRuntimeResult)}'.");
             }
             if (gDefn == typeof(ValueTuple<>))
             {
@@ -116,7 +109,6 @@ internal static class ValueTupleConvertHelper<TPublicResult, TRuntimeResult>
                 FieldHelper(t1, t2, nameof(ValueTuple<,,,,,,,>.Item5));
                 FieldHelper(t1, t2, nameof(ValueTuple<,,,,,,,>.Item6));
                 FieldHelper(t1, t2, nameof(ValueTuple<,,,,,,,>.Item7));
-                if (isInvalidTmp) return;
                 var rest1 = t1.GetField(nameof(ValueTuple<,,,,,,,>.Rest))!;
                 var rest2 = t2.GetField(nameof(ValueTuple<,,,,,,,>.Rest))!;
                 ilGen.Emit(OpCodes.Ldloc, tmp1);
@@ -129,8 +121,7 @@ internal static class ValueTupleConvertHelper<TPublicResult, TRuntimeResult>
             }
             else
             {
-                isInvalidTmp = true;
-                return;
+                throw new InvalidOperationException($"Cannot convert between types '{typeof(TPublicResult)}' and '{typeof(TRuntimeResult)}'.");
             }
         }
 
@@ -161,14 +152,8 @@ internal static class ValueTupleConvertHelper<TPublicResult, TRuntimeResult>
                 ilGen.Emit(OpCodes.Newobj, typeof(ValueString).GetConstructor([typeof(string)])!);
                 ilGen.Emit(OpCodes.Stfld, f1);
             }
-            else
-            {
-                isInvalidTmp = true;
-            }
         }
 
-        _isInvalid = isInvalidTmp;
-        if (isInvalidTmp) return;
         ilGen.Emit(OpCodes.Ret);
         _helper = dm.CreateDelegate<CopyDelegate>();
     }
