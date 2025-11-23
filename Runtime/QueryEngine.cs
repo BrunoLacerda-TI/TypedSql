@@ -9,7 +9,7 @@ public static class QueryEngine
 {
     public readonly struct CompiledQuery<TRow, TResult>(MethodInfo executeMethod)
     {
-        private readonly unsafe delegate* managed<ReadOnlySpan<TRow>, IReadOnlyList<TResult>> _entryPoint = (delegate* managed<ReadOnlySpan<TRow>, IReadOnlyList<TResult>>)executeMethod.MethodHandle.GetFunctionPointer();
+        private readonly Func<ReadOnlySpan<TRow>, IReadOnlyList<TResult>> _entryPoint = executeMethod.CreateDelegate<Func<ReadOnlySpan<TRow>, IReadOnlyList<TResult>>>();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IReadOnlyList<TResult> Execute(ReadOnlySpan<TRow> rows)
@@ -92,6 +92,7 @@ public static class QueryEngine
 internal static class QueryProgram<TRow, TPipeline, TRuntimeResult, TPublicResult>
     where TPipeline : IQueryNode<TRow, TRuntimeResult, TRow>
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IReadOnlyList<TPublicResult> Execute(ReadOnlySpan<TRow> rows)
     {
         var runtime = new QueryRuntime<TRuntimeResult>(rows.Length);
@@ -103,11 +104,11 @@ internal static class QueryProgram<TRow, TPipeline, TRuntimeResult, TPublicResul
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IReadOnlyList<TPublicResult> ConvertResult(ref QueryRuntime<TRuntimeResult> runtime)
     {
-        if (typeof(TRuntimeResult) == typeof(TPublicResult))
+        if (typeof(IReadOnlyList<TRuntimeResult>) == typeof(IReadOnlyList<TPublicResult>))
         {
             return (IReadOnlyList<TPublicResult>)(object)runtime.Rows;
         }
-        else if (typeof(TRuntimeResult) == typeof(ValueString) && typeof(TPublicResult) == typeof(string))
+        else if (typeof(IReadOnlyList<TRuntimeResult>) == typeof(IReadOnlyList<ValueString>) && typeof(IReadOnlyList<TPublicResult>) == typeof(IReadOnlyList<string>))
         {
             return (IReadOnlyList<TPublicResult>)(object)runtime.AsStringRows();
         }

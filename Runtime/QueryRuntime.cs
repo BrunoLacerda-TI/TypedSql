@@ -24,7 +24,7 @@ internal readonly struct ValueString(string? value) : IComparable<ValueString>
 [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
 internal ref struct QueryRuntime<TResult>(int expectedCount)
 {
-    private readonly TResult[] _buffer = expectedCount > 0 ? new TResult[expectedCount] : [];
+    private readonly TResult[] _buffer = new TResult[expectedCount];
     private int _count = 0;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -42,7 +42,7 @@ internal ref struct QueryRuntime<TResult>(int expectedCount)
             return;
         }
         // The resulted rows are never larger than the input rows, so no resizing is needed.
-        values.CopyTo(_buffer.AsSpan(_count));
+        values.CopyTo(MemoryMarshal.CreateSpan(ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(_buffer), _count), values.Length));
         _count += values.Length;
     }
 
@@ -58,7 +58,7 @@ internal ref struct QueryRuntime<TResult>(int expectedCount)
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly IReadOnlyList<string> AsStringRows()
     {
-        var buffer = (ValueString[]?)(object?)_buffer ?? [];
+        var buffer = (ValueString[])(object)_buffer;
         return new ValueStringQueryResult(buffer, _count);
     }
 
@@ -71,7 +71,7 @@ internal ref struct QueryRuntime<TResult>(int expectedCount)
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly ReadOnlySpan<TResult> AsSpan()
     {
-        return _buffer.AsSpan(0, _count);
+        return MemoryMarshal.CreateSpan(ref MemoryMarshal.GetArrayDataReference(_buffer), _count);
     }
 }
 
