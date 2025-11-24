@@ -14,10 +14,7 @@ public static class QueryEngine
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IReadOnlyList<TResult> Execute(ReadOnlySpan<TRow> rows)
         {
-            unsafe
-            {
-                return _entryPoint(rows);
-            }
+            return _entryPoint(rows);
         }
 
         public override string ToString()
